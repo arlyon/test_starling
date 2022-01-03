@@ -41,43 +41,44 @@ struct StarlingAccount {
 }
 
 impl StarlingAccount {
+
+    /// Get details for Starling account with api_key
+    async fn get_account_details(api_key: &String) -> Option<AccountDetail> {
+
+        let client = reqwest::Client::new();
+        let response = client
+            .get(format!("{}/accounts", BASE_URL))        
+            .header(AUTHORIZATION, format!("Bearer {}", api_key))
+            .header(ACCEPT, "application/json")
+            .send()
+            .await
+            .unwrap();
+        
+        match response.status() {
+            
+            reqwest::StatusCode::OK => {
+                let account_details = response.json::<AccountDetails>().await.expect("ERROR: Couldn't serialise AccountDetails");
+                account_details.accounts.into_iter().next()
+            },
+            
+            reqwest::StatusCode::FORBIDDEN => {
+                panic!("ERROR: Need to grab a new token");
+            },
+            
+            _ => {
+                panic!("ERROR: Could not get account details");
+            }
+        }
+    }
+
     async fn new(key: String) -> Self {
 
-        let detail = get_account_details(&key).await.unwrap();
+        let detail = Self::get_account_details(&key).await.unwrap();
 
         Self {
             key,
             base_url: BASE_URL.to_string(),
             detail,
-        }
-    }
-}
-
-/// Get details for Starling account with api_key
-async fn get_account_details(api_key: &String) -> Option<AccountDetail> {
-
-    let client = reqwest::Client::new();
-    let response = client
-        .get(format!("{}/accounts", BASE_URL))        
-        .header(AUTHORIZATION, format!("Bearer {}", api_key))
-        .header(ACCEPT, "application/json")
-        .send()
-        .await
-        .unwrap();
-    
-    match response.status() {
-        
-        reqwest::StatusCode::OK => {
-            let account_details = response.json::<AccountDetails>().await.expect("ERROR: Couldn't serialise AccountDetails");
-            account_details.accounts.into_iter().next()
-        },
-        
-        reqwest::StatusCode::FORBIDDEN => {
-            panic!("ERROR: Need to grab a new token");
-        },
-        
-        _ => {
-            panic!("ERROR: Could not get account details");
         }
     }
 }
@@ -91,8 +92,6 @@ async fn main() {
 
     // Get accounts
     let account = StarlingAccount::new(tokens.personal).await;
-
-    
 
     println!("{:#?}", account);
 }
