@@ -1,6 +1,7 @@
 //! Implements the functionality to model a Starling account
 
 use chrono::{DateTime, Utc};
+use colored::Colorize;
 use reqwest;
 use reqwest::header::{ACCEPT, AUTHORIZATION};
 use serde::{Deserialize, Serialize};
@@ -85,17 +86,26 @@ pub struct Transaction {
 
 impl ToString for Transaction {
     fn to_string(&self) -> String {
-        format!(
-            "{} : £{}.{} {} {}",
-            self.time.format("%Y-%m-%d"),
+        let entry = format!(
+            "{} {} {:4}.{:0<2} {} {}",
+            format!("{}", self.time.format("%Y-%m-%d")),
+            match self.status {
+                Status::Settled => " ",
+                _ => "*",
+            },
             self.sourceAmount.pennies / 100,
             self.sourceAmount.pennies % 100,
             match self.direction {
                 Direction::In => "<-",
                 Direction::Out => "->",
             },
-            self.counterparty_name
-        )
+            format!("{}", self.counterparty_name,).italic(),
+        );
+
+        match self.direction {
+            Direction::In => format!("{}", format!("{}", entry).green()),
+            Direction::Out => format!("{}", format!("{}", entry).red()),
+        }
     }
 }
 
