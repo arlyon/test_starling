@@ -32,7 +32,6 @@ struct AccountDetails {
 #[derive(Deserialize, Debug)]
 pub struct StarlingAccount {
     key: String,
-    base_url: String,
     detail: AccountDetail,
 }
 
@@ -42,7 +41,6 @@ impl StarlingAccount {
 
         Self {
             key,
-            base_url: BASE_URL.to_string(),
             detail,
         }
     }
