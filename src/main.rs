@@ -37,33 +37,24 @@ pub struct AccountDetails {
 struct StarlingAccount {
     key: String,
     base_url: String,
-    name: String,
-    #[serde(rename = "accountUid")]
-    pub account_uid: String,
-    #[serde(rename = "defaultCategory")]
-    pub default_category: String,
-    #[serde(rename = "createdAt")]
-    pub created_at: DateTime<Utc>,
+    detail: AccountDetail,
 }
 
 impl StarlingAccount {
-    fn new(api_key: String, details: AccountDetails) -> Self {
+    async fn new(key: String) -> Self {
 
-        println!("{:?}", details);
+        let detail = get_account_details(&key).await.unwrap();
 
         Self {
-            key: api_key,
+            key,
             base_url: BASE_URL.to_string(),
-            name: "".to_string(), // details.accounts[0].name, <----------------- ??????????????????
-            account_uid: "".to_string(),
-            default_category: "".to_string(),
-            created_at: Utc::now(),
+            detail,
         }
     }
 }
 
 /// Get details for Starling account with api_key
-async fn get_account_details(api_key: &String) -> Option<AccountDetails> {
+async fn get_account_details(api_key: &String) -> Option<AccountDetail> {
 
     let client = reqwest::Client::new();
     let response = client
@@ -78,7 +69,7 @@ async fn get_account_details(api_key: &String) -> Option<AccountDetails> {
         
         reqwest::StatusCode::OK => {
             let account_details = response.json::<AccountDetails>().await.expect("ERROR: Couldn't serialise AccountDetails");
-            Some(account_details) // <------ How to return `details.accounts[0]` ?
+            account_details.accounts.into_iter().next()
         },
         
         reqwest::StatusCode::FORBIDDEN => {
@@ -99,8 +90,9 @@ async fn main() {
     let tokens: Tokens = serde_yaml::from_reader(f).expect("Could not deserialise yaml");
 
     // Get accounts
-    let account_details = get_account_details(&tokens.personal).await.unwrap();
-    let account = StarlingAccount::new(tokens.personal, account_details);
+    let account = StarlingAccount::new(tokens.personal).await;
+
+    
 
     println!("{:#?}", account);
 }
