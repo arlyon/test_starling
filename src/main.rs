@@ -16,6 +16,8 @@ async fn main() {
 
     // Get accounts
     let account = StarlingAccount::new(tokens.personal).await;
-
-    println!("{:#?}", account);
+    
+    for transaction in account.transactions_since(chrono::Duration::days(7)).await {
+        println!("{}", transaction.to_string());
+    }
 }
