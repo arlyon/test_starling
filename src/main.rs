@@ -46,6 +46,7 @@ async fn main() {
     // Get accounts for each token
     let mut accounts = Vec::new();
     for token in tokens.as_array().iter() {
+        // TODO Check this with Alex <----------------------------
         accounts.push(StarlingAccount::new(token.to_string()).await);
     }
 
@@ -54,15 +55,24 @@ async fn main() {
         Command::Balances => todo!(),
 
         Command::Transactions { days } => {
+            // Fetch transactions from all Starling accounts and sort by date
+            let mut transactions = Vec::new();
             for account in accounts.iter() {
                 dbg!(&account.detail.name);
                 for transaction in account
                     .settled_transactions_between(chrono::Duration::days(days))
                     .await
                 {
-                    println!("{}", transaction.to_string());
+                    transactions.push(transaction);
                 }
             }
+            transactions.sort();
+
+            // Sort by date
+            for transaction in transactions.iter() {
+                println!("{}", transaction.to_string());
+            }
+            println!("Fetched {} transactions", transactions.len());
         }
     }
 }

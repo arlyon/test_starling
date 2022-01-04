@@ -29,7 +29,7 @@ struct AccountDetails {
     accounts: Vec<AccountDetail>,
 }
 
-#[derive(Deserialize, Debug, Eq, PartialEq)]
+#[derive(Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Direction {
     #[serde(rename = "IN")]
     In,
@@ -37,22 +37,22 @@ pub enum Direction {
     Out,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Currency {
     GBP,
     USD,
-    EUR
+    EUR,
 }
 
 /// Represents available currency values
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct CurrencyValue {
     #[serde(rename = "minorUnits")]
     pennies: u32,
     currency: Currency,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Status {
     #[serde(rename = "UPCOMING")]
     Upcoming,
@@ -65,13 +65,13 @@ pub enum Status {
 }
 
 /// Represents a transaction returned from the API
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Transaction {
-    #[serde(rename = "feedItemUid")]
-    pub uid: String,
-
     #[serde(rename = "transactionTime")]
     pub time: DateTime<Utc>,
+
+    #[serde(rename = "feedItemUid")]
+    pub uid: String,
 
     #[serde(rename = "counterPartyName")]
     pub counterparty_name: String,
@@ -177,7 +177,7 @@ impl StarlingAccount {
             .header(ACCEPT, "application/json")
             .query(&QueryChangesBetween {
                 min_transaction_timestamp: Utc::now() - since,
-                max_transaction_timestamp: Utc::now()
+                max_transaction_timestamp: Utc::now(),
             })
             .send()
             .await
