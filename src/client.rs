@@ -1,5 +1,6 @@
 //! Starling account model
 
+use crate::persist::ApiKey;
 use chrono::{DateTime, Utc};
 use colored::Colorize;
 use reqwest;
@@ -100,12 +101,12 @@ impl ToString for Transaction {
                 Direction::In => "<-",
                 Direction::Out => "->",
             },
-            format!("{}", self.counterparty_name,).italic(),
+            self.counterparty_name.italic(),
         );
 
         match self.direction {
-            Direction::In => format!("{}", format!("{}", entry).green()),
-            Direction::Out => format!("{}", format!("{}", entry).red()),
+            Direction::In => entry.green().to_string(),
+            Direction::Out => entry.red().to_string(),
         }
     }
 }
@@ -136,15 +137,14 @@ struct QueryChangesBetween {
 /// Represents a Starling account
 #[derive(Deserialize, Debug)]
 pub struct StarlingAccount {
-    pub key: String,
+    pub key: ApiKey,
     pub detail: AccountDetail,
 }
 
 impl StarlingAccount {
-    pub async fn new(key: String) -> Self {
-        let detail = Self::get_account_details(&key).await.unwrap();
-
-        Self { key, detail }
+    pub async fn new(key: ApiKey) -> Option<Self> {
+        let detail = Self::get_account_details(&key).await?;
+        Some(Self { key, detail })
     }
 
     pub async fn transactions_since(&self, since: chrono::Duration) -> Vec<Transaction> {
@@ -154,7 +154,7 @@ impl StarlingAccount {
                 "{}/feed/account/{}/category/{}",
                 BASE_URL, &self.detail.account_uid, &self.detail.default_category
             ))
-            .header(AUTHORIZATION, format!("Bearer {}", &self.key))
+            .header(AUTHORIZATION, format!("Bearer {}", &self.key.0))
             .header(ACCEPT, "application/json")
             .query(&QueryChangesSince {
                 changes_since: Utc::now() - since,
@@ -173,7 +173,7 @@ impl StarlingAccount {
                 "{}/feed/account/{}/settled-transactions-between",
                 BASE_URL, &self.detail.account_uid
             ))
-            .header(AUTHORIZATION, format!("Bearer {}", &self.key))
+            .header(AUTHORIZATION, format!("Bearer {}", &self.key.0))
             .header(ACCEPT, "application/json")
             .query(&QueryChangesBetween {
                 min_transaction_timestamp: Utc::now() - since,
@@ -187,15 +187,18 @@ impl StarlingAccount {
     }
 
     /// Get details for Starling account with api_key
-    async fn get_account_details(api_key: &String) -> Option<AccountDetail> {
+    async fn get_account_details(api_key: &ApiKey) -> Option<AccountDetail> {
         let client = reqwest::Client::new();
-        let response = client
+        let response = match client
             .get(format!("{}/accounts", BASE_URL))
-            .header(AUTHORIZATION, format!("Bearer {}", api_key))
+            .header(AUTHORIZATION, format!("Bearer {}", api_key.0))
             .header(ACCEPT, "application/json")
             .send()
             .await
-            .unwrap();
+        {
+            Ok(response) => response,
+            Err(_) => return None, // todo: this should be an error
+        };
 
         match response.status() {
             reqwest::StatusCode::OK => {
@@ -205,13 +208,13 @@ impl StarlingAccount {
                     .expect("ERROR: Couldn't serialise AccountDetails");
                 account_details.accounts.into_iter().next()
             }
-
             reqwest::StatusCode::FORBIDDEN => {
-                panic!("ERROR: Need to grab a new token");
+                eprintln!("ERROR: Need to grab a new token");
+                None
             }
-
             _ => {
-                panic!("ERROR: Could not get account details");
+                eprintln!("ERROR: Could not get account details");
+                None
             }
         }
     }

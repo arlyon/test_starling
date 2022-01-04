@@ -1,6 +1,9 @@
 //! Command Line Interface functions
 
 use clap::{Parser, Subcommand};
+use futures::future::join_all;
+use itertools::Itertools;
+
 use crate::client::StarlingAccount;
 use crate::persist;
 
@@ -26,25 +29,21 @@ pub enum Command {
     },
 }
 
-pub async fn do_transactions(accounts: &Vec<StarlingAccount>, days:i64) {
+pub async fn do_transactions(accounts: &[StarlingAccount], days: i64) {
     // Fetch transactions from all Starling accounts and sort by date.
-    let mut transactions = Vec::new();
-    for account in accounts.iter() {
-        dbg!(&account.detail.name);
-        for transaction in account
-            .settled_transactions_between(chrono::Duration::days(days))
-            .await
-        {
-            transactions.push(transaction);
-        }
-    }
-    transactions.sort();
+    let transactions = join_all(
+        accounts
+            .iter()
+            .map(|a| a.settled_transactions_between(chrono::Duration::days(days)))
+            .collect::<Vec<_>>(),
+    )
+    .await;
+    let transactions: Vec<_> = transactions.into_iter().flatten().sorted().collect();
 
     // Display.
     for transaction in transactions.iter() {
         println!("{}", transaction.to_string());
     }
-    println!("Fetched {} transactions", transactions.len());
 
     // Save
     persist::write_transactions(&transactions);
