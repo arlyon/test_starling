@@ -17,29 +17,6 @@ async fn main() {
     let args = cli::Args::parse();
     match args.command {
         cli::Command::Balances => todo!(),
-
-        cli::Command::Transactions { days } => {
-            // Fetch transactions from all Starling accounts and sort by date.
-            let mut transactions = Vec::new();
-            for account in accounts.iter() {
-                dbg!(&account.detail.name);
-                for transaction in account
-                    .settled_transactions_between(chrono::Duration::days(days))
-                    .await
-                {
-                    transactions.push(transaction);
-                }
-            }
-            transactions.sort();
-
-            // Display.
-            for transaction in transactions.iter() {
-                println!("{}", transaction.to_string());
-            }
-            println!("Fetched {} transactions", transactions.len());
-
-            // Save
-            persist::write_transactions(&transactions);
-        }
+        cli::Command::Transactions { days } => cli::do_transactions(&accounts, days).await,
     }
 }
