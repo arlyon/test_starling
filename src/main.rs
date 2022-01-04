@@ -9,6 +9,12 @@ struct Tokens {
     business: String,
 }
 
+impl Tokens {
+    pub fn as_array(&self) -> [&str; 2] {
+        [self.personal.as_str(), self.business.as_str()]
+    }
+}
+
 /// CLI arguments
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version, author)]
@@ -33,24 +39,29 @@ enum Command {
 
 #[tokio::main]
 async fn main() {
-    let args = Args::parse();
-
-    // Get tokens
+    // Get account tokens
     let f = std::fs::File::open(String::from("tokens.yml")).expect("Couldn't open tokens_file");
     let tokens: Tokens = serde_yaml::from_reader(f).expect("Could not deserialise yaml");
 
-    // Get accounts
-    let account = StarlingAccount::new(tokens.personal).await;
+    // Get accounts for each token
+    let mut accounts = Vec::new();
+    for token in tokens.as_array().iter() {
+        accounts.push(StarlingAccount::new(token.to_string()).await);
+    }
 
+    let args = Args::parse();
     match args.command {
         Command::Balances => todo!(),
 
         Command::Transactions { days } => {
-            for transaction in account
-                .transactions_since(chrono::Duration::days(days))
-                .await
-            {
-                println!("{}", transaction.to_string());
+            for account in accounts.iter() {
+                dbg!(&account.detail.name);
+                for transaction in account
+                    .settled_transactions_between(chrono::Duration::days(days))
+                    .await
+                {
+                    println!("{}", transaction.to_string());
+                }
             }
         }
     }

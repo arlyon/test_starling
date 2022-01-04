@@ -10,7 +10,7 @@ const BASE_URL: &str = "https://api.starlingbank.com/api/v2";
 
 // Holds the individual results of the "accounts" API call
 #[derive(Deserialize, Debug)]
-struct AccountDetail {
+pub struct AccountDetail {
     pub name: String,
 
     #[serde(rename = "accountUid")]
@@ -41,6 +41,7 @@ pub enum Direction {
 pub enum Currency {
     GBP,
     USD,
+    EUR
 }
 
 /// Represents available currency values
@@ -118,16 +119,25 @@ struct Transactions {
 
 /// Represents a query to the API
 #[derive(Serialize)]
-struct Query {
+struct QueryChangesSince {
     #[serde(rename = "changesSince")]
     changes_since: DateTime<Utc>,
+}
+
+/// Represents a query to the API
+#[derive(Serialize)]
+struct QueryChangesBetween {
+    #[serde(rename = "minTransactionTimestamp")]
+    min_transaction_timestamp: DateTime<Utc>,
+    #[serde(rename = "maxTransactionTimestamp")]
+    max_transaction_timestamp: DateTime<Utc>,
 }
 
 /// Represents a Starling account
 #[derive(Deserialize, Debug)]
 pub struct StarlingAccount {
-    key: String,
-    detail: AccountDetail,
+    pub key: String,
+    pub detail: AccountDetail,
 }
 
 impl StarlingAccount {
@@ -138,7 +148,6 @@ impl StarlingAccount {
     }
 
     pub async fn transactions_since(&self, since: chrono::Duration) -> Vec<Transaction> {
-        let start_date = Utc::now() - since;
         let client = reqwest::Client::new();
         let response = client
             .get(format!(
@@ -147,8 +156,28 @@ impl StarlingAccount {
             ))
             .header(AUTHORIZATION, format!("Bearer {}", &self.key))
             .header(ACCEPT, "application/json")
-            .query(&Query {
-                changes_since: start_date,
+            .query(&QueryChangesSince {
+                changes_since: Utc::now() - since,
+            })
+            .send()
+            .await
+            .unwrap();
+
+        response.json::<Transactions>().await.unwrap().feed_items
+    }
+
+    pub async fn settled_transactions_between(&self, since: chrono::Duration) -> Vec<Transaction> {
+        let client = reqwest::Client::new();
+        let response = client
+            .get(format!(
+                "{}/feed/account/{}/settled-transactions-between",
+                BASE_URL, &self.detail.account_uid
+            ))
+            .header(AUTHORIZATION, format!("Bearer {}", &self.key))
+            .header(ACCEPT, "application/json")
+            .query(&QueryChangesBetween {
+                min_transaction_timestamp: Utc::now() - since,
+                max_transaction_timestamp: Utc::now()
             })
             .send()
             .await
