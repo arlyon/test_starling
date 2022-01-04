@@ -2,15 +2,12 @@ mod cli;
 mod client;
 mod persist;
 use crate::client::StarlingAccount;
-use clap::{Parser};
+use clap::Parser;
 
 #[tokio::main]
 async fn main() {
-    // Get account tokens
-    let f = std::fs::File::open(String::from("tokens.yml")).expect("Couldn't open tokens_file");
-    let tokens: persist::Tokens = serde_yaml::from_reader(f).expect("Could not deserialise yaml");
-
     // Get accounts for each token.
+    let tokens = persist::Tokens::new("tokens.yml");
     let mut accounts = Vec::new();
     for token in tokens.as_array().iter() {
         // TODO Check this with Alex <----------------------------

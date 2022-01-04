@@ -1,4 +1,4 @@
-//! Starling account model 
+//! Starling account model
 
 use chrono::{DateTime, Utc};
 use colored::Colorize;
