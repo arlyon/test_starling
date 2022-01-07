@@ -32,25 +32,21 @@ pub enum Command {
 
 pub async fn do_update(accounts: &[StarlingAccount], days: i64) {
     // Fetch transactions from all Starling accounts and sort by date.
-    let transactions = join_all(
+    let new_transactions = join_all(
         accounts
             .iter()
             .map(|a| a.settled_transactions_between(chrono::Duration::days(days)))
             .collect::<Vec<_>>(),
     )
     .await;
-    let transactions: Vec<_> = transactions.into_iter().flatten().sorted().collect();
 
-    let mut transactions_dict = HashMap::new();
-    for t in transactions.iter() {
-        transactions_dict.insert(&t.uid, t);
-    }
+    let new_transactions: Vec<_> = new_transactions.into_iter().flatten().sorted().collect();
 
     // Display.
-    for transaction in transactions.iter() {
+    for transaction in new_transactions.iter() {
         println!("{}", transaction.to_string());
     }
 
-    persist::save_transactions(&transactions_dict);
+    persist::update_transactions(new_transactions);
     println!("Done")
 }

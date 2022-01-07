@@ -42,18 +42,17 @@ impl IntoIterator for Tokens {
 }
 
 /// Write transactions to the file system.
-pub fn save_transactions(transactions: &HashMap<&String, &Transaction>) {
+pub fn update_transactions(new_transactions: Vec<Transaction>) {
     println!("Writing transactions to file system");
 
     // Load current transactions if they exist
     let f = std::fs::File::open(String::from(TRANSACTION_FILE)).expect("Fail");
-    let current_transactions: Vec<Transaction> = serde_yaml::from_reader(f).unwrap();
+    let mut current_transactions: HashMap<String, Transaction> = serde_yaml::from_reader(f).unwrap();
 
-    // new_transactions
-    //     .iter()
-    //     .collect();
-
-    // Merge new transactions
+    // Add new transactions
+    for nt in new_transactions.into_iter() {
+        current_transactions.insert(nt.uid, nt);
+    }
 
     // Save updated transactions
     let f = std::fs::OpenOptions::new()
@@ -62,7 +61,7 @@ pub fn save_transactions(transactions: &HashMap<&String, &Transaction>) {
         .truncate(true)
         .open(TRANSACTION_FILE)
         .expect("Couldn't open file");
-    serde_yaml::to_writer(f, transactions).unwrap();
+    serde_yaml::to_writer(f, &current_transactions).unwrap();
 }
 
 fn does_exist_in(t: &Transaction, transactions: &Vec<Transaction>) -> bool {
