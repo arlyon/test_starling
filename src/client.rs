@@ -9,6 +9,14 @@ use serde::{Deserialize, Serialize};
 
 const BASE_URL: &str = "https://api.starlingbank.com/api/v2";
 
+// ACCOUNTS //////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// Holds the results of the "accounts" API call
+#[derive(Deserialize, Debug)]
+struct AccountDetails {
+    accounts: Vec<AccountDetail>,
+}
+
 // Holds the individual results of the "accounts" API call
 #[derive(Deserialize, Debug)]
 pub struct AccountDetail {
@@ -24,49 +32,17 @@ pub struct AccountDetail {
     pub created_at: DateTime<Utc>,
 }
 
-/// Holds the results of the "accounts" API call
-#[derive(Deserialize, Debug)]
-struct AccountDetails {
-    accounts: Vec<AccountDetail>,
-}
+// TRANSACTIONS //////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub enum Direction {
-    #[serde(rename = "IN")]
-    In,
-    #[serde(rename = "OUT")]
-    Out,
-}
-
-#[derive(Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub enum Currency {
-    GBP,
-    USD,
-    EUR,
-}
-
-/// Represents available currency values
-#[derive(Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub struct CurrencyValue {
-    #[serde(rename = "minorUnits")]
-    pennies: u32,
-    currency: Currency,
-}
-
-#[derive(Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub enum Status {
-    #[serde(rename = "UPCOMING")]
-    Upcoming,
-    #[serde(rename = "PENDING")]
-    Pending,
-    #[serde(rename = "SETTLED")]
-    Settled,
-    #[serde(rename = "ACCOUNT_CHECK")]
-    AccountCheck,
+/// Represents a single Transaction
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Transactions {
+    #[serde(rename = "feedItems")]
+    feed_items: Vec<Transaction>,
 }
 
 /// Represents a transaction returned from the API
-#[derive(Deserialize, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Transaction {
     #[serde(rename = "transactionTime")]
     pub time: DateTime<Utc>,
@@ -84,6 +60,41 @@ pub struct Transaction {
     pub reference: String,
 
     pub status: Status,
+}
+
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub enum Direction {
+    #[serde(rename = "IN")]
+    In,
+    #[serde(rename = "OUT")]
+    Out,
+}
+
+/// Represents available currency values
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct CurrencyValue {
+    #[serde(rename = "minorUnits")]
+    pennies: u32,
+    currency: Currency,
+}
+
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub enum Currency {
+    GBP,
+    USD,
+    EUR,
+}
+
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub enum Status {
+    #[serde(rename = "UPCOMING")]
+    Upcoming,
+    #[serde(rename = "PENDING")]
+    Pending,
+    #[serde(rename = "SETTLED")]
+    Settled,
+    #[serde(rename = "ACCOUNT_CHECK")]
+    AccountCheck,
 }
 
 impl ToString for Transaction {
@@ -111,28 +122,7 @@ impl ToString for Transaction {
     }
 }
 
-/// Represents a single Transaction
-#[derive(Deserialize, Debug)]
-struct Transactions {
-    #[serde(rename = "feedItems")]
-    feed_items: Vec<Transaction>,
-}
-
-/// Represents a query to the API
-#[derive(Serialize)]
-struct QueryChangesSince {
-    #[serde(rename = "changesSince")]
-    changes_since: DateTime<Utc>,
-}
-
-/// Represents a query to the API
-#[derive(Serialize)]
-struct QueryChangesBetween {
-    #[serde(rename = "minTransactionTimestamp")]
-    min_transaction_timestamp: DateTime<Utc>,
-    #[serde(rename = "maxTransactionTimestamp")]
-    max_transaction_timestamp: DateTime<Utc>,
-}
+// STARLING ACCOUNT //////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Represents a Starling account
 #[derive(Deserialize, Debug)]
@@ -218,4 +208,20 @@ impl StarlingAccount {
             }
         }
     }
+}
+
+/// Represents a query to the API
+#[derive(Serialize)]
+struct QueryChangesSince {
+    #[serde(rename = "changesSince")]
+    changes_since: DateTime<Utc>,
+}
+
+/// Represents a query to the API
+#[derive(Serialize)]
+struct QueryChangesBetween {
+    #[serde(rename = "minTransactionTimestamp")]
+    min_transaction_timestamp: DateTime<Utc>,
+    #[serde(rename = "maxTransactionTimestamp")]
+    max_transaction_timestamp: DateTime<Utc>,
 }

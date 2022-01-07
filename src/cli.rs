@@ -3,8 +3,9 @@
 use clap::{Parser, Subcommand};
 use futures::future::join_all;
 use itertools::Itertools;
+use std::collections::HashMap;
 
-use crate::client::StarlingAccount;
+use crate::client::{StarlingAccount, Transaction};
 use crate::persist;
 
 /// CLI arguments
@@ -21,15 +22,15 @@ pub enum Command {
     /// Account balances
     Balances,
 
-    /// Account Transactions
-    Transactions {
+    /// Update Transactions
+    Update {
         //// Days to get
         #[clap(short, long, default_value_t = 7)]
         days: i64,
     },
 }
 
-pub async fn do_transactions(accounts: &[StarlingAccount], days: i64) {
+pub async fn do_update(accounts: &[StarlingAccount], days: i64) {
     // Fetch transactions from all Starling accounts and sort by date.
     let transactions = join_all(
         accounts
@@ -40,11 +41,16 @@ pub async fn do_transactions(accounts: &[StarlingAccount], days: i64) {
     .await;
     let transactions: Vec<_> = transactions.into_iter().flatten().sorted().collect();
 
+    let mut transactions_dict = HashMap::new();
+    for t in transactions.iter() {
+        transactions_dict.insert(&t.uid, t);
+    }
+
     // Display.
     for transaction in transactions.iter() {
         println!("{}", transaction.to_string());
     }
 
-    // Save
-    persist::write_transactions(&transactions);
+    persist::save_transactions(&transactions_dict);
+    println!("Done")
 }

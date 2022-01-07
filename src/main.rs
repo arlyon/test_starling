@@ -27,6 +27,6 @@ async fn main() {
     let args = cli::Args::parse();
     match args.command {
         cli::Command::Balances => todo!(),
-        cli::Command::Transactions { days } => cli::do_transactions(&accounts, days).await,
+        cli::Command::Update { days } => cli::do_update(&accounts, days).await,
     }
 }

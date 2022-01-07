@@ -1,3 +1,4 @@
 /target
-tokens.yml
 .DS_Store
+tokens.yml
+transactions.yml
