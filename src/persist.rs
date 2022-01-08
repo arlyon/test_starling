@@ -51,7 +51,7 @@ pub fn update_transactions(new_transactions: Vec<Transaction>) {
 
     // Add new transactions
     for nt in new_transactions.into_iter() {
-        current_transactions.insert(nt.uid, nt);
+        current_transactions.insert(nt.uid.clone(), nt);
     }
 
     // Save updated transactions
